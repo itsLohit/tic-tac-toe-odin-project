@@ -1,43 +1,44 @@
-function Gameboard(){
+
+
+
+const Gameboard = (() => {
     const row = 3;
     const column = 3;
     let gameboard = [];
 
-    for(let i=0; i<row; i++){
-        gameboard[i] = [];
-        for(let j=0; j<column; j++){
-            gameboard[i].push(cell());
-        }
-    }
+    gameboard = [
+        [" ", " ", " "],
+        [" ", " ", " "],
+        [" ", " ", " "]
+    ];
+    
+    const resetBoard = () => {
+        gameboard = [
+            [" ", " ", " "],
+            [" ", " ", " "],
+            [" ", " ", " "]
+        ];
+    };
+
+    const getBoard = () => gameboard;
     
     const markToken = (row, column, player) => {
         if(gameboard[row][column] !== " ")
             return;
         gameboard[row][column] = player;
+        return true;
     };
-
-    const printBoard = () =>{
-        for(let i=0; i<row; i++){
-            for(let j=0; j<column; j++){
-                console.log(gameboard[i][j]);
-            }
-            console.log('\n');
-        }
-    }
 
     return {
-        gameboard,
+        getBoard,
         markToken,
-        printBoard
+        resetBoard  
     };
-}
+})();
 
 
 
 const Player = (name, token) =>{
-    this.name = name;
-    this.token = token;
-    
     const getName = () => name;
     const getToken = ()  => token;
 
@@ -49,22 +50,22 @@ const Player = (name, token) =>{
 
 
 
-function cell(){
-    let value = " ";
-    return value;
-}
 
-
-
-function gameController(){
+const gameController = (() => {
+    let gameOver = false;
     let round = 1;
-
     const playerX = Player("Player1", "X");
     const playerO = Player("Player2", "O");
-    let board = Gameboard();
+    let board = Gameboard;
+    let currentPlayer = playerX;
+
+    const getgameOverStatus = () => gameOver;
+    const changeGameStatus = () => {
+        gameOver = !gameOver; 
+    };
     
 
-    let currentPlayer = playerX;
+    
 
     let getCurrentPlayer = () => currentPlayer;
 
@@ -74,31 +75,43 @@ function gameController(){
     };
 
     const playRound = (row, column) => {
-        for(let i=0; i<9; i++){
+        if (!gameOver && round<10) {
+            if(board.markToken(row, column, getCurrentPlayer().getToken())){
+                console.log("Round = ", round);
+                console.log("Now Playing = ", getCurrentPlayer().getName());
             if (checkForWin()){
                 alert(getCurrentPlayer().getName() + "Won");
+                changeGameStatus();
+                console.log(gameOver);
+                HandleDisplay.playAgain();
             }
-            row = prompt("Enter row", Number);
-            column = prompt("enter column", Number);
-            if(board.gameboard[row][column] === " "){
-                board.markToken(row, column, getCurrentPlayer().getToken());
+            else if (checkForTie()){
+                alert("Tie");
+                changeGameStatus();
+                HandleDisplay.playAgain();
+            }
+            else {
                 changePlayer();
-                 console.log(board.gameboard);
-                console.log("Now Playing");
-                console.log(getCurrentPlayer().getName());
                 round += 1;
-                console.log(round);
             }
-            else{
-                alert("Invalid Entry");
-                i--;
-            }
-            
+            HandleDisplay.gameDisplay();
+            return true;
         }
-        if (checkForTie()){
-            alert("Tie");
+        else {
+            alert("Invalid Entry");
+                console.log("Invalid Entry");
+                return false;
         }
+    }
     };
+
+    const resetGameState = () => {
+        round = 1;
+        currentPlayer = playerX;
+        board.resetBoard();
+        gameOver = false;
+    }
+
 
     const winCombinations = [
         [0, 0, 0, 1, 0, 2],
@@ -114,24 +127,98 @@ function gameController(){
     const checkForWin = () =>{
         for(let combination of winCombinations){
             const[i, j, k, l, m, n] = combination;
-            if(board.gameboard[i][j] !== " " && board.gameboard[i][j] == board.gameboard[k][l] && board.gameboard[i][j] == board.gameboard[m][n]){
+            if(board.getBoard()[i][j] !== " " && board.getBoard()[i][j] == board.getBoard()[k][l] && board.getBoard()[i][j] == board.getBoard()[m][n]){
                 return true;
         }
-        
         }
         return false;
-    }
+    };
 
     const checkForTie = () => {
-        if(round>9)
+        if (round >= 9 && !checkForWin()) {
             return true;
-    }
+        }
+        return false;
+    };
+
+    
 
     return{
         playRound,
-        getCurrentPlayer
+        getCurrentPlayer,
+        resetGameState,
+        getgameOverStatus,
+        changeGameStatus
     };
+})();
+
+
+const HandleDisplay = (() => {
+    const board = Gameboard;
+    const container = document.querySelector(".game-container");
+    const resetBtn = document.querySelector(".resetBtn");
+
+    const gameDisplay = () => {
+        const gameContainer = document.querySelectorAll(".game-cell");
+        let i = 0;
+        let j = 0;
+        
+        gameContainer.forEach(gameCell => {
+            gameCell.textContent = Gameboard.getBoard()[i][j];
+            gameCell.setAttribute("cellRow", i);
+            gameCell.setAttribute("cellColumn", j);
+            j+=1;
+            if(j===3){
+                i+=1;
+                j=0;
+            }
+        });
+    };
+
+    container.addEventListener("click", (e) => {
+        const gameCell = e.target;
+
+        if (gameCell.classList.contains("game-cell")) { 
+            const row = gameCell.getAttribute("cellRow");
+            const column = gameCell.getAttribute("cellColumn");
+
+            if (gameController.getgameOverStatus() === false) {
+                if (gameController.playRound(parseInt(row), parseInt(column))) {
+                    gameCell.textContent = board.getBoard()[row][column]; 
+                }
+            }
+        }
+    });
+
+    const playAgain = () =>{
+        const existingBtn = resetBtn.querySelector("button");
+        if (existingBtn) {
+            existingBtn.remove();
+        }
+        
+        const playAgainBtn = document.createElement("button");
+        playAgainBtn.textContent = "Play Again";
+        resetBtn.appendChild(playAgainBtn);
+        playAgainBtn.addEventListener("click", () =>{
+            resetGame();
+            playAgainBtn.remove();
+        });
+    };
+
+    return{
+        gameDisplay,
+        playAgain
+    };
+})();
+
+
+function resetGame(){
+    gameController.resetGameState();
+    console.log(Gameboard.getBoard());
+    HandleDisplay.gameDisplay();
 }
 
+HandleDisplay.gameDisplay();
 
-gameController().playRound();
+
+
