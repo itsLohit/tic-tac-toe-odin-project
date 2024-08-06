@@ -110,8 +110,7 @@ const gameController = (() => {
         currentPlayer = playerX;
         board.resetBoard();
         gameOver = false;
-    }
-
+    };
 
     const winCombinations = [
         [0, 0, 0, 1, 0, 2],
@@ -140,8 +139,6 @@ const gameController = (() => {
         }
         return false;
     };
-
-    
 
     return{
         playRound,
